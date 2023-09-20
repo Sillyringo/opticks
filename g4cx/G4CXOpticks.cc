@@ -23,7 +23,6 @@
 #include "U4Tree.h"
 
 #include "CSGFoundry.h"
-#include "CSG_GGeo_Convert.h"
 #include "CSGOptiX.h"
 #include "QSim.hh"
 

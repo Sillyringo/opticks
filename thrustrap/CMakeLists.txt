@@ -10,7 +10,6 @@ include(OpticksBuildOptions NO_POLICY_SCOPE)
 
 set(ThrustRap_VERBOSE OFF)
 
-find_package(OpticksCore REQUIRED CONFIG)
 find_package(CUDARap  REQUIRED CONFIG)
 
 if(ThrustRap_VERBOSE)
@@ -78,7 +77,7 @@ When it should be using::
 
 #]=]
 
-target_link_libraries( ${name} Opticks::OpticksCore Opticks::CUDARap)
+target_link_libraries( ${name} Opticks::CUDARap)
 target_compile_definitions( ${name} PUBLIC OPTICKS_THRAP )
 #target_compile_definitions( ${name} PRIVATE WITH_NVTOOLS )
 target_include_directories( ${name} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> )

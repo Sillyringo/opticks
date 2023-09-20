@@ -22,8 +22,6 @@ new world approach.
 
 
 find_package(U4       REQUIRED CONFIG)
-find_package(ExtG4    REQUIRED CONFIG)
-find_package(CSG_GGeo REQUIRED CONFIG)
 find_package(CSGOptiX REQUIRED CONFIG)
 
 
@@ -45,8 +43,6 @@ add_library( ${name}  SHARED ${SOURCES} ${HEADERS} )
 
 target_link_libraries( ${name} PUBLIC
     Opticks::U4
-    Opticks::ExtG4
-    Opticks::CSG_GGeo
     Opticks::CSGOptiX
 )
 
