@@ -1,6 +1,10 @@
 G4CXOpticks/index
 ==================
 
+.. From copilot
+This rst file seems to be a documentation file for a project related to simulating and tracing 3D models using Geant4 and Opticks. The file includes a list of shell scripts and their descriptions, which likely contain commands for running simulations and tracing rays through the models.
+g4cx likely refers to Geant4CX, which is a Geant4-based simulation framework that allows for the integration of Geant4 simulations with Opticks ray tracing.
+
 render
 --------
 
