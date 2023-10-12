@@ -1282,17 +1282,132 @@ DONE : random aligned comparisons of QSim_MockTest_cf_S4OpBoundaryProcessTest.sh
 +----+----------------------------------------------------------------------+--------------------------------------------+
 
 
-TODO : Compare without random aligment
------------------------------------------
- 
-TODO : Compare the actual CUDA impl, now that the MOCK_CUDA one is debugged
+DONE : Compare the actual CUDA impl, now that the MOCK_CUDA one is debugged
 ------------------------------------------------------------------------------
 
-TODO : Investigate how to incorporate the normal smearing
+
+DONE : Review surface switching in G4OpBoundaryProcess and qsim.h (action and translation)
+-------------------------------------------------------------------------------------------
+
+
+::
+
+    ~/opticks/sysrap/tests/ground.sh 
+
+
+    CSGFoundry/SSim/stree/surface/NNVTMaskOpticalSurface/NPFold_meta.txt
+    OpticalSurfaceName:opNNVTMask
+    TypeName:dielectric_metal
+    ModelName:unified
+    FinishName:ground
+    Type:0
+    Model:1
+    Finish:3
+    ModelValue:0.2
+    lv:NNVTMCPPMTlMaskTail
+    type:Skin
+    -rw-rw-r--  1 blyth  staff  192 Sep  7 20:20 CSGFoundry/SSim/stree/surface/NNVTMaskOpticalSurface/ABSLENGTH.npy
+    -rw-rw-r--  1 blyth  staff  160 Sep  7 20:20 CSGFoundry/SSim/stree/surface/NNVTMaskOpticalSurface/REFLECTIVITY.npy
+
+
+::
+
+    ~/opticks/sysrap/tests/stree_py_test.sh
+    ..
+
+    In [16]: st.f.surface.NNVTMaskOpticalSurface.REFLECTIVITY                                                                                                  
+    Out[16]: 
+    array([[0.   , 0.535],
+           [0.   , 0.535]])
+
+    In [19]: st.f.surface.HamamatsuMaskOpticalSurface.REFLECTIVITY                                                                                             
+    Out[19]: 
+    array([[0.   , 0.535],
+           [0.   , 0.535]])
+
+
+
+
+
+HMM : Investigate how to incorporate the normal smearing
 -----------------------------------------------------------
 
-TODO: Find some sigma_alpha/polish surfaces to hunt for deviations
---------------------------------------------------------------------
+My re-reading of G4OpBoundaryProcess suggests that DielectricMetal Mask sigma_alpha surfaces are 
+actually doing nothing .. because ChooseReflection always sets theStatus LambertianReflection
+for prob_ss prob_sl prob_bs all zero (their default). 
+
+THATS GOOD NEWS : IF CONFIRMED : AS MEANS NO NEED TO INTEGRATE THE SMEAR NORMAL STUFF 
+
+
+HMM : U4SimulateTest.sh GDML bordered surf ref issue...
+----------------------------------------------------------------------------------------
+
+
+HMM error with a border surface reference when loading /Users/blyth/.opticks/GEOM/FewPMT/origin.gdml::
+
+    G4GDML: Reading '/Users/blyth/.opticks/GEOM/FewPMT/origin.gdml'...
+    G4GDML: Reading definitions...
+    G4GDML: Reading materials...
+    G4GDML: Reading solids...
+    G4GDML: Reading structure...
+
+    -------- EEEE ------- G4Exception-START -------- EEEE -------
+    *** G4Exception : ReadError
+          issued by : G4GDMLReadStructure::GetPhysvol()
+    Referenced physvol 'Rock_lv_pv0x7f99eed51ed0' was not found!
+    *** Fatal Exception *** core dump ***
+
+Try commenting that bordersurface::
+
+    407     <skinsurface name="HamamatsuMaskOpticalSurface" surfaceproperty="opHamamatsuMask">
+    408       <volumeref ref="hmsklMaskTail0x7f99eed481b0"/>
+    409     </skinsurface>
+    410     <!--bordersurface name="water_rock_bs" surfaceproperty="water_rock_bs">
+    411       <physvolref ref="Water_lv_pv0x7f99eed51e80"/>
+    412       <physvolref ref="Rock_lv_pv0x7f99eed51ed0"/>
+    413     </bordersurface-->
+    414   </structure>
+
+
+DONE : Confirmed sigma_alpha "useless" for mask tail using mask_tail_diagonal_line
+--------------------------------------------------------------------------------------
+
+* Doing Geant4 side only as access to WiFi requires gymnastics beside my window
+
+u4/tests/storch_FillGenstep.sh::
+
+    175     elif [ "$CHECK" == "mask_tail_diagonal_line" ]; then
+    176     
+    177         intent="point symmetrically placed to tareget outside of nmskTail"
+    178         ttype=line 
+    179         radius=50   
+    180         pos=-214,0,-127
+    181         mom=1,0,1
+
+
+::
+
+    MODE=2 ~/opticks/u4/tests/U4SimulateTest.sh run_ph
+    MODE=2 ~/opticks/u4/tests/U4SimulateTest.sh ph
+
+    MODE=2 BP=C4OpBoundaryProcess::PostStepDoIt ~/opticks/u4/tests/U4SimulateTest.sh dbg_ph
+
+    ## NB the "C" not "G" in C4OpBoundaryProcess::PostStepDoIt
+    ## Custom4 process is in use via the j/PMTSim lib 
+
+    MODE=2 BP=C4OpBoundaryProcess::GetFacetNormal ~/opticks/u4/tests/U4SimulateTest.sh dbg_ph
+
+
+Note that the breakpoint C4OpBoundaryProcess::GetFacetNormal is never hit 
+confirming the suspicion that the sigma_alpha actually going nothing. 
+
+
+
+
+
+
+DONE : Find some sigma_alpha/polish surfaces to hunt for deviations : LPMT MaskTail
+--------------------------------------------------------------------------------------
 
 
 

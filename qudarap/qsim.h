@@ -89,8 +89,8 @@ struct qsim
     QSIM_METHOD void    generate_photon_dummy( sphoton& p, curandStateXORWOW& rng, const quad6& gs, unsigned photon_id, unsigned genstep_id ) const ; 
     QSIM_METHOD static float3 uniform_sphere(const float u0, const float u1); 
     QSIM_METHOD static float RandGaussQ_shoot( curandStateXORWOW& rng, float mean, float stdDev ); 
-    QSIM_METHOD static void SmearNormal_SigmaAlpha( curandStateXORWOW& rng, float3& smeared_normal, const float3& mom, const float3& normal, float sigma_alpha, bool );
-    QSIM_METHOD static void SmearNormal_Polish(     curandStateXORWOW& rng, float3& smeared_normal, const float3& mom, const float3& normal, float polish     , bool ); 
+    QSIM_METHOD static void SmearNormal_SigmaAlpha( curandStateXORWOW& rng, float3* smeared_normal, const float3* direction, const float3* normal, float sigma_alpha, const sctx& ctx );
+    QSIM_METHOD static void SmearNormal_Polish(     curandStateXORWOW& rng, float3* smeared_normal, const float3* direction, const float3* normal, float polish     , const sctx& ctx ); 
 
 #if defined(__CUDACC__) || defined(__CUDABE__) || defined( MOCK_CURAND ) || defined(MOCK_CUDA)
     QSIM_METHOD static float3 uniform_sphere(curandStateXORWOW& rng); 
@@ -223,26 +223,50 @@ inline QSIM_METHOD float qsim::RandGaussQ_shoot( curandStateXORWOW& rng, float m
 qsim::SmearNormal_SigmaAlpha
 ------------------------------
 
-TODO: FIND PI MULTIPLE CONSTANTS 
+CAUTION : THIS CURRENTLY NOT USED BY ANYTHING OTHER THAN TESTS
+
+The reason is that a Geant4 simulation with some sigma_alpha/polish 
+surfaces will not actually use G4OpBoundaryProcess::GetFacetNormal unless
+a bunch of conditions are satisfied such as having non-zero values of some 
+of prob_sl/prob_ss/prob_bs that induces G4OpBoundaryProcess::ChooseReflection 
+to return something other that LambertianReflection.
+
+**THIS MAKES ME SUSPECT ACTUAL USE OF NORMAL SMEARING IS VERY RARE**
+
++----------------------+-------------------------------+------------------------------+----------------------+
+| G4OpBoundaryProcess  | G4MaterialPropertiesIndex.hh  | G4MaterialPropertiesTable.cc | ChooseReflection     |  
++======================+===============================+==============================+======================+
+| prob_sl              | kSPECULARLOBECONSTANT         | SPECULARLOBECONSTANT         | LobeReflection       | 
++----------------------+-------------------------------+------------------------------+----------------------+
+| prob_ss              | kSPECULARSPIKECONSTANT        | SPECULARSPIKECONSTANT        | SpikeReflection      |  
++----------------------+-------------------------------+------------------------------+----------------------+
+| prob_bs              | kBACKSCATTERCONSTANT          | BACKSCATTERCONSTANT          | BackScattering       |
++----------------------+-------------------------------+------------------------------+----------------------+
+| all zero =>          |                               |                              | LambertianReflection |
++----------------------+-------------------------------+------------------------------+----------------------+
+
+TODO: full simulation run with breakpoint "BP=C4OpBoundaryProcess::GetFacetNormal"
+
+* C4 (not G4) as Custom4 is in use for the boundary process 
 
 **/
 
 inline QSIM_METHOD void qsim::SmearNormal_SigmaAlpha( 
     curandStateXORWOW& rng, 
-    float3& smeared_normal, 
-    const float3& direction, 
-    const float3& normal, 
+    float3* smeared_normal, 
+    const float3* direction, 
+    const float3* normal, 
     float sigma_alpha, 
-#ifdef MOCK_CUDA_DEBUG
-    bool dump
-#else
-    bool
-#endif
+    const sctx& ctx
    )
 {
+#ifdef MOCK_CUDA_DEBUG
+    bool dump = ctx.idx == -1 ; 
+#endif
+
     if(sigma_alpha == 0.f)
     {
-        smeared_normal = normal ;  
+        *smeared_normal = *normal ;  
         return ; 
     } 
     float f_max = fminf(1.f,4.f*sigma_alpha);
@@ -276,17 +300,17 @@ inline QSIM_METHOD void qsim::SmearNormal_SigmaAlpha(
         u2 = curand_uniform(&rng) ; 
         phi = u2*M_PIf*2.f ;
 
-        smeared_normal.x = sin_alpha * cosf(phi) ; 
-        smeared_normal.y = sin_alpha * sinf(phi) ; 
-        smeared_normal.z = cosf(alpha) ; 
+        smeared_normal->x = sin_alpha * cosf(phi) ; 
+        smeared_normal->y = sin_alpha * sinf(phi) ; 
+        smeared_normal->z = cosf(alpha) ; 
 
-        smath::rotateUz(smeared_normal, normal);
-        reject_dir = dot(smeared_normal, direction ) >= 0.f ;   
-        // reject smears into same hemi as direction
+        smath::rotateUz(*smeared_normal, *normal);
+        reject_dir = dot(*smeared_normal, *direction ) >= 0.f ;   
+        // reject smears that move the normal into same hemi as direction
 
 #ifdef MOCK_CUDA_DEBUG
         if(dump) printf("//qsim::SmearNormal_SigmaAlpha.MOCK_CUDA_DEBUG u2 %10.5f phi %10.5f smeared_normal ( %10.5f, %10.5f, %10.5f)  reject_dir %d  \n", 
-               u2, phi, smeared_normal.x, smeared_normal.y, smeared_normal.z, reject_dir ); 
+               u2, phi, smeared_normal->x, smeared_normal->y, smeared_normal->z, reject_dir ); 
 #endif
 
 
@@ -297,30 +321,28 @@ inline QSIM_METHOD void qsim::SmearNormal_SigmaAlpha(
 qsim::SmearNormal_Polish
 ------------------------------
 
+CAUTION : THIS CURRENTLY NOT USED BY ANYTHING OTHER THAN TESTS : SEE DETAILS ABOVE
+
 **/
 
 inline QSIM_METHOD void qsim::SmearNormal_Polish( 
     curandStateXORWOW& rng, 
-    float3& smeared_normal, 
-    const float3& direction, 
-    const float3& normal, 
-    float polish, 
-#ifdef MOCK_CUDA_DEBUG
-    bool  dump  
-#else
-    bool 
-#endif
+    float3* smeared_normal, 
+    const float3* direction, 
+    const float3* normal, 
+    float polish,
+    const sctx& ctx
     )
 {
+#ifdef MOCK_CUDA_DEBUG
+    bool dump = ctx.idx == -1 ; 
+#endif
+
     if(polish == 1.f)
     {
-        smeared_normal = normal ;  
+        *smeared_normal = *normal ;  
         return ; 
     } 
-
-#ifdef MOCK_CUDA
-    if(dump) printf("//qsim::SmearNormal_Polish \n"); 
-#endif
 
     float u0, u1, u2 ; 
     float3 smear ;
@@ -339,11 +361,11 @@ inline QSIM_METHOD void qsim::SmearNormal_Polish(
        } 
        while( reject_mag );
 
-       smeared_normal = normal + (1.f-polish)*smear;
-       reject_dir = dot(smeared_normal, direction ) >= 0.f ;  
+       *smeared_normal = *normal + (1.f-polish)*smear;
+       reject_dir = dot(*smeared_normal, *direction) >= 0.f ;  
     } 
     while( reject_dir );
-    smeared_normal = normalize(smeared_normal); 
+    *smeared_normal = normalize(*smeared_normal); 
 }
 
 
@@ -1588,8 +1610,8 @@ inline QSIM_METHOD int qsim::propagate_at_multifilm(unsigned& flag, curandStateX
 #if defined(__CUDACC__) || defined(__CUDABE__) || defined( MOCK_CURAND ) || defined(MOCK_CUDA)
           
 /**
-qsim::propagate_at_surface
-----------------------------
+qsim::propagate_at_surface   (HMM: perhaps propagate_at_simplified_surface )
+-------------------------------------------------------------------------------
 
 +---------------------+------------------+---------------------------------------------------------+--------------+
 | output flag         |   command        |  changed                                                |  note        |

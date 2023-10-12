@@ -458,7 +458,7 @@ subsequent reuse within the test geomerty.
 inline void U4Tree::initSurfaces_Serialize()
 {
     std::vector<U4SurfacePerfect> perfect ; 
-    U4SurfacePerfect::Get(perfect);
+    U4SurfacePerfect::Get(perfect);  // perfect Detect,Absorb,Specular,Diffuse surfaces 
 
     int num_perfect = perfect.size(); 
     for(int i=0 ; i < num_perfect ; i++)
@@ -467,6 +467,7 @@ inline void U4Tree::initSurfaces_Serialize()
         const char* name = perf.name.c_str() ; 
         st->add_surface( name );   
     }
+
 
     U4SurfaceArray serialize(surfaces, st->implicit, perfect) ;   
     st->standard->sur = serialize.sur ; 
@@ -528,6 +529,16 @@ as too difficult to leap direct from G4 to CSG
 models and a dependency fire break is advantageous. 
 
 cf X4PhysicalVolume::ConvertSolid_ X4Solid::Convert
+
+
+HMM: this could be the place to branch for 
+special handling of deep CSG trees, based on 
+hints planted in the G4VSolid name of the root
+solid. Doing up here rather than within U4Solid::Convert
+would avoid recursive complications. 
+
+BUT: could rely on CSG_LISTNODE hints within the 
+tree to direct the alt conversion 
 
 **/
 

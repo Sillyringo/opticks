@@ -2,10 +2,12 @@ usage(){ cat << EOU
 FewPMT.sh
 ==========
 
-This geomscript is sourced from::
+This geomscript may depending on GEOM be sourced for example from::
 
-   U4SimtraceTest.sh
-   U4SimulateTest.sh
+   u4/tests/U4SimtraceTest.sh
+   u4/tests/U4SimulateTest.sh
+   g4cx/tests/G4CXTest.sh
+
 
 Moved LAYOUT control here to be in common 
 between U4SimulateTest.sh and U4SimtraceTest.sh 
@@ -90,7 +92,9 @@ export nnvt_UsePMTNaturalGeometry=$version
 #geomlist=tub3LogicalPMT       # A/B match with circle_inwards_100 
 
 #geomlist=hmskLogicMaskVirtual
-geomlist=nmskLogicMaskVirtual   # FIXED? : LOOKS LIKE DR AT POI 4 DIFFERENCE A(OK):STAYS IN PLANE, B(G4) DOESNT 
+#geomlist=nmskLogicMaskVirtual  
+#geomlist=xjacLogical
+geomlist=xjfcLogical
 
 export FewPMT_GEOMList=$geomlist
 
